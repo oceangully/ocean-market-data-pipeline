@@ -617,8 +617,8 @@ th{background:#1a1f35} a{color:#00d4aa}</style></head><body>
         Route("/docs", endpoint=docs),
     ])
     
-    # x402 支付中间件（纯 ASGI，兼容 SSE）
-    app.add_middleware(X402ASGIMiddleware)
+    # x402 支付中间件（纯 ASGI，直接包裹）
+    app = X402ASGIMiddleware(app)
     
     print(f"🌊 Ocean Market Data Pipeline v2.0.0")
     print(f"   SSE:   http://{host}:{port}/sse")
