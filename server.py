@@ -484,9 +484,8 @@ class X402ASGIMiddleware:
         payment_json = json.dumps(X402_CONFIG)
         payment_b64 = base64.b64encode(payment_json.encode()).decode()
         body = json.dumps({
-            "error": "Payment Required",
-            "message": f"This endpoint requires {X402_PAYMENT_SCHEME['payload']['amount']} {X402_PAYMENT_SCHEME['payload']['token']} per call",
-            "payment": X402_CONFIG
+            "x402Version": 1,
+            "accepts": X402_CONFIG["accepts"]
         }).encode()
         
         await send({
