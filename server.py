@@ -395,16 +395,20 @@ def generate_briefing() -> dict:
 # ============================================================
 
 # Payment config — 与 OKX ASP #4234 绑定
-X402_CONFIG = {
-    "x402Version": 1,
-    "network": "eip155:196",          # OKX chain
+X402_PAYMENT_SCHEME = {
     "scheme": "exact",
+    "network": "eip155:196",
     "recipient": "0x92bfb69ee0574f3120d042ba05d8b839749a7907",
     "payload": {
         "token": "USDT",
         "amount": "1.8",
         "decimals": 6
     }
+}
+
+X402_CONFIG = {
+    "x402Version": 1,
+    "accepts": [X402_PAYMENT_SCHEME]
 }
 
 # 免费路径
@@ -441,7 +445,7 @@ async def x402_middleware(request, call_next):
         }
         body = json.dumps({
             "error": "Payment Required",
-            "message": f"This endpoint requires {X402_CONFIG['payload']['amount']} {X402_CONFIG['payload']['token']} per call",
+            "message": f"This endpoint requires {X402_PAYMENT_SCHEME['payload']['amount']} {X402_PAYMENT_SCHEME['payload']['token']} per call",
             "payment": X402_CONFIG
         })
         return Response(body, status_code=402, headers=headers, media_type="application/json")
