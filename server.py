@@ -440,7 +440,7 @@ async def x402_middleware(request, call_next):
         payment_b64 = base64.b64encode(payment_json.encode()).decode()
         headers = {
             "payment-required": payment_b64,
-            "x-payment-network": X402_CONFIG["network"],
+            "x-payment-network": X402_PAYMENT_SCHEME["network"],
             "content-type": "application/json",
         }
         body = json.dumps({
@@ -451,6 +451,57 @@ async def x402_middleware(request, call_next):
         return Response(body, status_code=402, headers=headers, media_type="application/json")
     
     return await call_next(request)
+
+
+class X402ASGIMiddleware:
+    """纯 ASGI 中间件 — 兼容 SSE 流式连接"""
+    def __init__(self, app):
+        self.app = app
+    
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        
+        path = scope["path"]
+        if path in X402_FREE_PATHS or path.startswith("/messages/"):
+            await self.app(scope, receive, send)
+            return
+        
+        # 从 ASGI scope 提取 headers
+        headers = {}
+        for k, v in scope.get("headers", []):
+            headers[k.decode().lower()] = v.decode()
+        
+        sig = headers.get("x-payment") or headers.get("payment-signature") or ""
+        tx = headers.get("x-payment-tx") or headers.get("payment-tx-hash") or ""
+        
+        if sig or tx:
+            await self.app(scope, receive, send)
+            return
+        
+        # 未支付 → 402
+        payment_json = json.dumps(X402_CONFIG)
+        payment_b64 = base64.b64encode(payment_json.encode()).decode()
+        body = json.dumps({
+            "error": "Payment Required",
+            "message": f"This endpoint requires {X402_PAYMENT_SCHEME['payload']['amount']} {X402_PAYMENT_SCHEME['payload']['token']} per call",
+            "payment": X402_CONFIG
+        }).encode()
+        
+        await send({
+            "type": "http.response.start",
+            "status": 402,
+            "headers": [
+                (b"content-type", b"application/json"),
+                (b"payment-required", payment_b64.encode()),
+                (b"x-payment-network", X402_PAYMENT_SCHEME["network"].encode()),
+            ],
+        })
+        await send({
+            "type": "http.response.body",
+            "body": body,
+        })
 
 
 # ============================================================
@@ -566,10 +617,8 @@ th{background:#1a1f35} a{color:#00d4aa}</style></head><body>
         Route("/docs", endpoint=docs),
     ])
     
-    # x402 支付中间件
-    from starlette.middleware import Middleware
-    from starlette.middleware.base import BaseHTTPMiddleware
-    app.add_middleware(BaseHTTPMiddleware, dispatch=x402_middleware)
+    # x402 支付中间件（纯 ASGI，兼容 SSE）
+    app.add_middleware(X402ASGIMiddleware)
     
     print(f"🌊 Ocean Market Data Pipeline v2.0.0")
     print(f"   SSE:   http://{host}:{port}/sse")
