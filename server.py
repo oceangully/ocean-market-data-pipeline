@@ -15,6 +15,7 @@ from mcp.server import Server
 from mcp.types import Tool, TextContent
 import asyncio
 import argparse
+import base64
 
 # ============================================================
 # 工具函数
@@ -390,6 +391,65 @@ def generate_briefing() -> dict:
 
 
 # ============================================================
+# x402 Payment Middleware
+# ============================================================
+
+# Payment config — 与 OKX ASP #4234 绑定
+X402_CONFIG = {
+    "x402Version": 1,
+    "network": "eip155:196",          # OKX chain
+    "scheme": "exact",
+    "recipient": "0x92bfb69ee0574f3120d042ba05d8b839749a7907",
+    "payload": {
+        "token": "USDT",
+        "amount": "1.8",
+        "decimals": 6
+    }
+}
+
+# 免费路径
+X402_FREE_PATHS = {"/", "/health", "/docs"}
+
+# 简单内存计数器（生产环境应换 Redis）
+_payment_counter: dict[str, int] = {}
+
+def _check_payment(request) -> bool:
+    """检查请求是否携带有效支付凭证 — 简化版，OKX 平台走托管验证"""
+    # OKX A2MCP 框架注入的支付头
+    sig = request.headers.get("x-payment") or request.headers.get("payment-signature") or ""
+    tx = request.headers.get("x-payment-tx") or request.headers.get("payment-tx-hash") or ""
+    if sig or tx:
+        # 有支付凭证 → 允许通过（完整验证需链上 RPC 查询，MVP 阶段信任 OKX 网关）
+        return True
+    return False
+
+async def x402_middleware(request, call_next):
+    """x402 支付中间件：未支付 → 402，已支付 → 透传"""
+    from starlette.responses import Response
+    
+    path = request.url.path
+    if path in X402_FREE_PATHS or path.startswith("/messages/"):
+        return await call_next(request)
+    
+    if not _check_payment(request):
+        payment_json = json.dumps(X402_CONFIG)
+        payment_b64 = base64.b64encode(payment_json.encode()).decode()
+        headers = {
+            "payment-required": payment_b64,
+            "x-payment-network": X402_CONFIG["network"],
+            "content-type": "application/json",
+        }
+        body = json.dumps({
+            "error": "Payment Required",
+            "message": f"This endpoint requires {X402_CONFIG['payload']['amount']} {X402_CONFIG['payload']['token']} per call",
+            "payment": X402_CONFIG
+        })
+        return Response(body, status_code=402, headers=headers, media_type="application/json")
+    
+    return await call_next(request)
+
+
+# ============================================================
 # MCP Server
 # ============================================================
 
@@ -501,6 +561,12 @@ th{background:#1a1f35} a{color:#00d4aa}</style></head><body>
         Route("/health", endpoint=health),
         Route("/docs", endpoint=docs),
     ])
+    
+    # x402 支付中间件
+    from starlette.middleware import Middleware
+    from starlette.middleware.base import BaseHTTPMiddleware
+    app.add_middleware(BaseHTTPMiddleware, dispatch=x402_middleware)
+    
     print(f"🌊 Ocean Market Data Pipeline v2.0.0")
     print(f"   SSE:   http://{host}:{port}/sse")
     print(f"   Docs:  http://{host}:{port}/docs")
