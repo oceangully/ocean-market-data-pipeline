@@ -494,7 +494,7 @@ class X402ASGIMiddleware:
             "status": 402,
             "headers": [
                 (b"content-type", b"application/json"),
-                (b"payment-required", payment_b64.encode()),
+                (b"PAYMENT-REQUIRED", payment_b64.encode()),
                 (b"x-payment-network", X402_PAYMENT_SCHEME["network"].encode()),
             ],
         })
