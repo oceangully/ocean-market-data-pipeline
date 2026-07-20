@@ -447,11 +447,7 @@ async def x402_middleware(request, call_next):
             "x-payment-network": X402_PAYMENT_SCHEME["network"],
             "content-type": "application/json",
         }
-        body = json.dumps({
-            "error": "Payment Required",
-            "message": f"This endpoint requires {X402_PAYMENT_SCHEME['payload']['amount']} {X402_PAYMENT_SCHEME['payload']['token']} per call",
-            "payment": X402_CONFIG
-        })
+        body = json.dumps(X402_CONFIG)
         return Response(body, status_code=402, headers=headers, media_type="application/json")
     
     return await call_next(request)
@@ -487,10 +483,7 @@ class X402ASGIMiddleware:
         # 未支付 → 402
         payment_json = json.dumps(X402_CONFIG)
         payment_b64 = base64.b64encode(payment_json.encode()).decode()
-        body = json.dumps({
-            "x402Version": 1,
-            "accepts": X402_CONFIG["accepts"]
-        }).encode()
+        body = json.dumps(X402_CONFIG).encode()
         
         await send({
             "type": "http.response.start",
