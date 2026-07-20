@@ -394,20 +394,24 @@ def generate_briefing() -> dict:
 # x402 Payment Middleware
 # ============================================================
 
-# Payment config — 与 OKX ASP #4234 绑定
+# Payment config — 与 OKX ASP #4234 绑定，x402 v2 格式
 X402_PAYMENT_SCHEME = {
     "scheme": "exact",
     "network": "eip155:196",
-    "recipient": "0x92bfb69ee0574f3120d042ba05d8b839749a7907",
-    "payload": {
-        "token": "USDT",
-        "amount": "1.8",
-        "decimals": 6
-    }
+    "asset": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
+    "amount": "1800000",  # 1.8 USDT，最小单位（decimals=6）
+    "payTo": "0x92bfb69ee0574f3120d042ba05d8b839749a7907",
+    "maxTimeoutSeconds": 300,
+    "extra": {"name": "USD₮0", "version": "1"}
 }
 
 X402_CONFIG = {
-    "x402Version": 1,
+    "x402Version": 2,
+    "resource": {
+        "url": "https://oceanmarket.zeabur.app/sse",
+        "description": "Ocean Market Data Pipeline — crypto prices, US stock indices, Mag7 quotes, historical data, and market briefing",
+        "mimeType": "application/json"
+    },
     "accepts": [X402_PAYMENT_SCHEME]
 }
 
