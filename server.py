@@ -399,7 +399,7 @@ X402_PAYMENT_SCHEME = {
     "scheme": "exact",
     "network": "eip155:196",
     "asset": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
-    "amount": "1800000",  # 1.8 USDT，最小单位（decimals=6）
+    "amount": "500000",  # 0.5 USDT，最小单位（decimals=6）
     "payTo": "0x92bfb69ee0574f3120d042ba05d8b839749a7907",
     "maxTimeoutSeconds": 300,
     "extra": {"name": "USD₮0", "version": "1"}
@@ -596,7 +596,7 @@ th{background:#1a1f35} a{color:#00d4aa}</style></head><body>
 <h1>Ocean Market Data Pipeline</h1><p><em>Wall Street, accessible to any AI Agent.</em></p>
 <p>SSE Endpoint: <code>/sse</code> | Health: <code>/health</code> | Docs: <code>/docs</code></p>
 <h2>Pricing</h2><table><tr><th>Plan</th><th>Price</th><th>Rate Limit</th></tr>
-<tr><td>Standard</td><td>1.8 USDT / call</td><td>60 calls/min</td></tr>
+<tr><td>Standard</td><td>0.5 USDT / call</td><td>60 calls/min</td></tr>
 <tr><td>Pro (coming soon)</td><td>50 USDT / month</td><td>600 calls/min</td></tr></table>
 <h2>Tools</h2><table><tr><th>Tool</th><th>Description</th></tr>
 """ + "".join(f"<tr><td><code>{t.name}</code></td><td>{t.description}</td></tr>" for t in TOOLS) + """
